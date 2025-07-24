@@ -31,4 +31,4 @@ uv run --active run.py \
     --logging_debug \
     --target_schema_path "./schemas/${DATASET}_schema.csv" \
     --zh \
-    --refinement_iterations 3
+    --refinement_iterations 1
