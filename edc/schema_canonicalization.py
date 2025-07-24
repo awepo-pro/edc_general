@@ -1,15 +1,8 @@
-from typing import List
-import os
-from pathlib import Path
 import edc.utils.llm_utils as llm_utils
-import re
-from edc.utils.e5_mistral_utils import MistralForSequenceEmbedding
 from edc.utils.llm_utils import OllamaEmbedder
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import numpy as np
 import copy
+import numpy as np
 from tqdm import tqdm
-from sentence_transformers import SentenceTransformer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,9 +16,9 @@ class SchemaCanonicalizer:
         self,
         target_schema_dict: dict,
         embedder: OllamaEmbedder,
-        verify_model: AutoTokenizer = None,
-        verify_tokenizer: AutoTokenizer = None,
-        verify_openai_model: AutoTokenizer = None,
+        verify_model = None,
+        verify_tokenizer = None,
+        verify_openai_model = None,
     ) -> None:
         # The canonicalizer uses an embedding model to first fetch candidates from the target schema, then uses a verifier schema to decide which one to canonicalize to or not
         # canonoicalize at all.
@@ -69,11 +62,11 @@ class SchemaCanonicalizer:
     def llm_verify(
         self,
         input_text_str: str,
-        query_triplet: List[str],
+        query_triplet: list[str],
         query_relation_definition: str,
         prompt_template_str: str,
         candidate_relation_definition_dict: dict,
-        relation_example_dict: dict = None,
+        relation_example_dict: dict | None = None,
     ):
         canonicalized_triplet = copy.deepcopy(query_triplet)
         choice_letters_list = []
@@ -81,13 +74,18 @@ class SchemaCanonicalizer:
         candidate_relations = list(candidate_relation_definition_dict.keys())
         candidate_relation_descriptions = list(candidate_relation_definition_dict.values())
 
+        index = 0
+
         for idx, rel in enumerate(candidate_relations):
-            choice_letter = chr(ord("@") + idx + 1)
+            index = idx
+
+            choice_letter = chr(ord("@") + index + 1)
             choice_letters_list.append(choice_letter)
-            choices += f"{choice_letter}. '{rel}': {candidate_relation_descriptions[idx]}\n"
+            choices += f"{choice_letter}. '{rel}': {candidate_relation_descriptions[index]}\n"
             if relation_example_dict is not None:
-                choices += f"Example: '{relation_example_dict[candidate_relations[idx]]['triple']}' can be extracted from '{candidate_relations[idx]['sentence']}'\n"
-        choices += f"{chr(ord('@')+idx+2)}. None of the above.\n"
+                choices += f"Example: '{relation_example_dict[candidate_relations[index]]['triple']}' can be extracted from '{candidate_relations[index]['sentence']}'\n"
+
+        choices += f"{chr(ord('@')+index+2)}. None of the above.\n"
 
         verification_prompt = prompt_template_str.format_map(
             {
@@ -100,15 +98,11 @@ class SchemaCanonicalizer:
         )
 
         messages = [{"role": "user", "content": verification_prompt}]
-        if self.verifier_openai_model is None:
-            # llm_utils.generate_completion_transformers([messages], self.model, self.tokenizer, device=self.device)
-            verification_result = llm_utils.generate_completion_transformers(
-                messages, self.verifier_model, self.verifier_tokenizer, answer_prepend="Answer: ", max_new_token=5
-            )
-        else:
-            verification_result = llm_utils.openai_chat_completion(
-                self.verifier_openai_model, None, messages, max_tokens=1
-            )
+
+        assert self.verifier_openai_model is not None
+        verification_result = llm_utils.openai_chat_completion(
+            self.verifier_openai_model, None, messages, max_tokens=1
+        )
 
         if verification_result[0] in choice_letters_list:
             canonicalized_triplet[1] = candidate_relations[choice_letters_list.index(verification_result[0])]

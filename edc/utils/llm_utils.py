@@ -1,10 +1,7 @@
 import os
 from openai import OpenAI
 import time
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 import ast
-from sentence_transformers import SentenceTransformer
-from typing import List, Optional
 import gc
 import torch
 import logging
@@ -17,7 +14,7 @@ class OllamaEmbedder:
     def __init__(self, model_name: str):
         self.model_name = model_name
         
-    def encode(self, text: str | List[str], prompt_name: str | None = None, prompt: str | None = None) -> List[float] | List[List[float]]:
+    def encode(self, text: str | list[str], prompt_name: str | None = None, prompt: str | None = None) -> list[float] | list[list[float]]:
         """
         Generate embeddings for text using Ollama.
         
@@ -29,15 +26,6 @@ class OllamaEmbedder:
         Returns:
             Single embedding vector or list of embedding vectors
         """
-        # # Warn if prompt_name is used since Ollama doesn't support it
-        # if prompt_name is not None:
-        #     import warnings
-        #     warnings.warn(
-        #         f"prompt_name='{prompt_name}' is not supported by Ollama embeddings API and will be ignored. "
-        #         "Consider using the 'prompt' parameter instead.",
-        #         UserWarning
-        #     )
-        
         def _prepare_text(input_text: str) -> str:
             """Prepare text by prepending prompt if provided."""
             if prompt:
@@ -63,12 +51,12 @@ class OllamaEmbedder:
 
 
 
-def free_model(model: Optional[AutoModelForCausalLM] = None, tokenizer: Optional[AutoTokenizer] = None):
+def free_model(model = None, tokenizer = None):
     """
     delete model (not really necessary)
     """
     try:
-        model.cpu()
+        model.cpu() # type: ignore
         if model is not None:
             del model
         if tokenizer is not None:
@@ -111,7 +99,7 @@ def get_detailed_instruct(task_description: str, query: str) -> str:
     return f"Instruct: {task_description}\nQuery: {query}"
 
 
-def get_embedding_sts(model: SentenceTransformer, text: str, prompt_name=None, prompt=None):
+def get_embedding_sts(model, text: str, prompt_name=None, prompt=None):
     embedding = model.encode(text, prompt_name=prompt_name, prompt=prompt)
     return embedding
 
@@ -150,7 +138,7 @@ def parse_raw_triplets(raw_triplets: str):
             if len(parsed_triple) == 3 and all([isinstance(t, str) for t in parsed_triple]):
                 if all([e != "" and e != "_" for e in parsed_triple]):
                     collected_triples.append(parsed_triple)
-            elif not all([type(x) == type(parsed_triple[0]) for x in parsed_triple]):
+            elif not all([type(x) is type(parsed_triple[0]) for x in parsed_triple]):
                 for e_idx, e in enumerate(parsed_triple):
                     if isinstance(e, list):
                         parsed_triple[e_idx] = ", ".join(e)
@@ -183,37 +171,6 @@ def parse_relation_definition(raw_definitions: str):
 
 def is_model_openai(model_name):
     return "gpt" in model_name or 'deepseek' in model_name
-
-
-def generate_completion_transformers(
-    input: list,
-    model: AutoModelForCausalLM,
-    tokenizer: AutoTokenizer,
-    max_new_token=256,
-    answer_prepend="",
-):
-    device = model.device
-    tokenizer.pad_token = tokenizer.eos_token
-
-    messages = tokenizer.apply_chat_template(input, add_generation_prompt=True, tokenize=False) + answer_prepend
-
-    model_inputs = tokenizer(messages, return_tensors="pt", padding=True, add_special_tokens=False).to(device)
-
-    generation_config = GenerationConfig(
-        do_sample=False,
-        max_new_tokens=max_new_token,
-        pad_token_id=tokenizer.eos_token_id,
-        return_dict_in_generate=True,
-    )
-
-    generation = model.generate(**model_inputs, generation_config=generation_config)
-    sequences = generation["sequences"]
-    generated_ids = sequences[:, model_inputs["input_ids"].shape[1] :]
-    generated_texts = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
-
-    logging.debug(f"Prompt:\n {messages}\n Result: {generated_texts}")
-    return generated_texts
-
 
 def openai_chat_completion(model, system_prompt, history, temperature=0, max_tokens=512):
     base_url = None
@@ -249,4 +206,5 @@ def openai_chat_completion(model, system_prompt, history, temperature=0, max_tok
             logging.debug(f'{e=}')
             time.sleep(5)
     logging.debug(f"Model: {model}\nPrompt:\n {messages}\n Result: {response.choices[0].message.content}")
-    return response.choices[0].message.content
+
+    return str(response.choices[0].message.content)

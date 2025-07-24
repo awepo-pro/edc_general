@@ -30,4 +30,5 @@ uv run --active run.py \
     --output_dir "./output/${DATASET}_self_canonicalization" \
     --logging_debug \
     --target_schema_path "./schemas/${DATASET}_schema.csv" \
-    --zh
+    --zh \
+    --refinement_iterations 3
