@@ -1,0 +1,15 @@
+[project]
+name = "edc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "accelerate>=1.9.0",
+    "datasets>=4.0.0",
+    "ollama>=0.5.1",
+    "openai>=1.97.0",
+    "peft>=0.16.0",
+    "sentence-transformers>=5.0.0",
+    "torch>=2.7.1",
+]

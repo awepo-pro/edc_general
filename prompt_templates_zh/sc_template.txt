@@ -1,0 +1,9 @@
+给定以下文本和从中提取的一个关系三元组：
+
+文本: {input_text}
+三元组: {query_triplet}
+
+三元组中的关系“{query_relation}”被定义为“{query_relation_definition}”。在此语境中，有没有其他合适的关系可以替代它？请仅用字母选择回答。
+ 
+选项:  
+{choices}
