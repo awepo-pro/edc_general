@@ -22,6 +22,9 @@ source ~/.venv/bin/activate
 ./run.sh
 ```
 
+# dataset
+If you want to use your own data to build KG, create a new file and store your data (let say `example3.txt`). After that, change the variable `DATASET=example` in `run.sh`
+
 # change to chatgpt api
 Now, it is default to use deepseek-chat. If you want to use chatgpt, change the variable to `MODEL` to the model name you want. For example,
 
